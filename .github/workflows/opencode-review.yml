@@ -1,4 +1,5 @@
 # Automatic PR review with OpenCode Go. Called from each project repo.
+# The prompt adapts the two-axis /code-review skill (Standards + Spec) to one CI run.
 name: opencode-review
 
 on:
@@ -13,8 +14,14 @@ on:
 
 jobs:
   review:
+    # Fork PRs get no secrets, so skip them instead of failing.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    # A new push cancels the review of the older commit.
+    concurrency:
+      group: opencode-review-${{ github.repository }}-${{ github.event.pull_request.number }}
+      cancel-in-progress: true
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     permissions:
       contents: read
       pull-requests: write
@@ -32,7 +39,47 @@ jobs:
           variant: high
           use_github_token: true
           prompt: |
-            Review this pull request. Focus on bugs, security problems,
-            data loss, and missing tests. Skip style nits.
-            Follow the repository AGENTS.md or CLAUDE.md if present.
-            Post one concise review comment in Portuguese.
+            Review pull request #${{ github.event.pull_request.number }} on two separate axes: Standards and Spec.
+            Do not edit files, commit, or push. Your only output is one PR comment.
+
+            ## 1. Diff
+            Run `git diff origin/${{ github.event.pull_request.base.ref }}...HEAD` and
+            `git log origin/${{ github.event.pull_request.base.ref }}..HEAD --oneline`.
+
+            ## 2. Spec source
+            The spec is the PR title and body (`gh pr view ${{ github.event.pull_request.number }}`)
+            plus every issue they or the commits reference (`#123`, `Closes #45`), read with `gh issue view`.
+            If none of these states a requirement, report "Sem spec disponível" for the Spec axis.
+
+            ## 3. Standards sources
+            Read every file in the repo that documents how code should be written:
+            AGENTS.md, CLAUDE.md, CODING_STANDARDS.md, CONTRIBUTING.md, and docs they point to.
+            Skip anything that linters or formatters already enforce.
+
+            Also apply this smell baseline (Fowler, Refactoring ch. 3). A documented repo standard
+            always wins over it. Each smell is a judgement call ("possível Feature Envy"), never a hard violation:
+            - Mysterious Name: name does not reveal what it does or holds. Fix: rename.
+            - Duplicated Code: same logic shape in more than one hunk or file. Fix: extract shared shape.
+            - Feature Envy: method uses another object's data more than its own. Fix: move it to that data.
+            - Data Clumps: same fields or params travel together. Fix: bundle into one type.
+            - Primitive Obsession: primitive or string stands for a domain concept. Fix: give it a type.
+            - Repeated Switches: same switch/if-cascade on the same type recurs. Fix: polymorphism or one shared map.
+            - Shotgun Surgery: one logical change forces scattered edits. Fix: gather into one module.
+            - Divergent Change: one module edited for unrelated reasons. Fix: split it.
+            - Speculative Generality: abstraction or hooks the spec does not need. Fix: delete or inline.
+            - Message Chains: long a.b().c().d() navigation. Fix: hide the walk behind one method.
+            - Middle Man: function or class that mostly delegates. Fix: call the real target.
+            - Refused Bequest: subclass ignores most of what it inherits. Fix: use composition.
+
+            ## 4. Review each axis independently
+            Standards: per file/hunk, (a) every violation of a documented standard, citing the file and rule;
+            (b) any baseline smell, named, with the hunk quoted. Mark hard violations vs judgement calls.
+            Spec: (a) requirements missing or partial; (b) behaviour not asked for (scope creep);
+            (c) requirements that look implemented but wrong. Quote the spec line for each finding.
+            Also flag bugs, security problems, and data loss risks under the axis they fit.
+
+            ## 5. Comment
+            Post one PR comment in Portuguese, under 800 words, with exactly these sections:
+            `## Standards`, `## Spec`, and a final one-line summary with the number of findings
+            per axis and the worst issue within each axis. Do not merge or rerank findings across axes.
+            If an axis has no findings, say so in one line.
