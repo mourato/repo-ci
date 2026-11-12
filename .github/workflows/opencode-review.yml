@@ -48,6 +48,9 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           MODEL: ${{ inputs.model }}
           VARIANT: high
+          # The review runs unattended: a permission prompt would hang until the
+          # job timeout. Deny access outside the checkout so the request fails fast.
+          OPENCODE_PERMISSION: '{"external_directory":"deny"}'
           USE_GITHUB_TOKEN: 'true'
           PROMPT: |
             Review pull request #${{ github.event.pull_request.number }} on two separate axes: Standards and Spec.
