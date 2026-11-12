@@ -44,9 +44,14 @@ jobs:
 
             ## 1. Diff
             Run `git diff origin/${{ github.event.pull_request.base.ref }}...HEAD` and
-            `git log origin/${{ github.event.pull_request.base.ref }}..HEAD --oneline`.
+            `git log origin/${{ github.event.pull_request.base.ref }}..HEAD --oneline`. The reviewed head is `${{ github.event.pull_request.head.sha }}`.
 
-            ## 2. Spec source
+            ## 2. Previous review
+            Read earlier review comments on this PR (`gh pr view ${{ github.event.pull_request.number }} --comments`).
+            If one exists, check each of its findings against the current diff and
+            mark it `resolved` or `still open`. Reuse its finding IDs for still-open items.
+
+            ## 3. Spec source
             The spec is the originating requirement this change implements, never the code itself.
             Look for it in this order and use every source you find:
             1. Issues referenced in the commits, PR title, or PR body (`#123`, `Closes #45`), read with `gh issue view`.
@@ -55,35 +60,57 @@ jobs:
             3. The PR title and body (`gh pr view ${{ github.event.pull_request.number }}`), only if it states requirements.
             If none of these states a requirement, report "No spec available" for the Spec axis.
 
-            ## 3. Standards sources
+            ## 4. Standards sources
             Read every file in the repo that documents how code should be written:
             AGENTS.md, CLAUDE.md, CODING_STANDARDS.md, CONTRIBUTING.md, and docs they point to.
+            Apply any `## Review focus` section first: it lists mistakes this repo has seen before.
             Skip anything that linters or formatters already enforce.
 
-            Also apply this smell baseline (Fowler, Refactoring ch. 3). A documented repo standard
-            always wins over it. Each smell is a judgement call ("possível Feature Envy"), never a hard violation:
-            - Mysterious Name: name does not reveal what it does or holds. Fix: rename.
-            - Duplicated Code: same logic shape in more than one hunk or file. Fix: extract shared shape.
-            - Feature Envy: method uses another object's data more than its own. Fix: move it to that data.
-            - Data Clumps: same fields or params travel together. Fix: bundle into one type.
-            - Primitive Obsession: primitive or string stands for a domain concept. Fix: give it a type.
-            - Repeated Switches: same switch/if-cascade on the same type recurs. Fix: polymorphism or one shared map.
-            - Shotgun Surgery: one logical change forces scattered edits. Fix: gather into one module.
-            - Divergent Change: one module edited for unrelated reasons. Fix: split it.
-            - Speculative Generality: abstraction or hooks the spec does not need. Fix: delete or inline.
-            - Message Chains: long a.b().c().d() navigation. Fix: hide the walk behind one method.
-            - Middle Man: function or class that mostly delegates. Fix: call the real target.
-            - Refused Bequest: subclass ignores most of what it inherits. Fix: use composition.
+            ## 5. What to look for, in priority order
+            1. Bugs, security problems, and data loss risks.
+            2. Violations of a documented repo standard, citing the file and rule.
+            3. A behavior change without an update to README.md or docs/, unless the PR states why.
+            4. Code smells from this baseline (Fowler, Refactoring ch. 3). A documented repo standard
+               always wins over it. Each smell is a judgement call ("possible Feature Envy"), never a hard violation:
+               - Mysterious Name: name does not reveal what it does or holds. Fix: rename.
+               - Duplicated Code: same logic shape in more than one hunk or file. Fix: extract shared shape.
+               - Feature Envy: method uses another object's data more than its own. Fix: move it to that data.
+               - Data Clumps: same fields or params travel together. Fix: bundle into one type.
+               - Primitive Obsession: primitive or string stands for a domain concept. Fix: give it a type.
+               - Repeated Switches: same switch/if-cascade on the same type recurs. Fix: polymorphism or one shared map.
+               - Shotgun Surgery: one logical change forces scattered edits. Fix: gather into one module.
+               - Divergent Change: one module edited for unrelated reasons. Fix: split it.
+               - Speculative Generality: abstraction or hooks the spec does not need. Fix: delete or inline.
+               - Message Chains: long a.b().c().d() navigation. Fix: hide the walk behind one method.
+               - Middle Man: function or class that mostly delegates. Fix: call the real target.
+               - Refused Bequest: subclass ignores most of what it inherits. Fix: use composition.
 
-            ## 4. Review each axis independently
-            Standards: per file/hunk, (a) every violation of a documented standard, citing the file and rule;
-            (b) any baseline smell, named, with the hunk quoted. Mark hard violations vs judgement calls.
+            ## 6. Evidence rules
+            - Report a finding only with a concrete, reachable failure path or a quoted rule it breaks.
+              A preference without a concrete defect is not a finding.
+            - You see only this repository. Code it calls from elsewhere (for example a shared
+              workflow in another repo) is out of view: do not report it as missing. If a finding
+              depends on such code, mark it `unverifiable`.
+
+            ## 7. Review each axis independently
+            Standards: per file/hunk, violations of documented standards, bugs, and smells.
             Spec: (a) requirements missing or partial; (b) behaviour not asked for (scope creep);
             (c) requirements that look implemented but wrong. Quote the spec line for each finding.
-            Also flag bugs, security problems, and data loss risks under the axis they fit.
+            Put bugs, security, and data loss findings under the axis they fit.
 
-            ## 5. Comment
+            Severity for every finding:
+            - `blocker`: breaks the intended behavior or contract, or a security or data loss risk.
+            - `should`: a real defect or standard violation that should be fixed in this PR.
+            - `nit`: minor; fixing it is optional.
+
+            Format every finding as one item:
+            `<ID> [<severity>] <path>:<line> — <problem>. Fix: <fix>.`
+            IDs are `S1`, `S2`, ... for Standards and `P1`, `P2`, ... for Spec.
+
+            ## 8. Comment
             Post one PR comment in English, under 800 words, with exactly these sections:
-            `## Standards`, `## Spec`, and a final one-line summary with the number of findings
-            per axis and the worst issue within each axis. Do not merge or rerank findings across axes.
-            If an axis has no findings, say so in one line.
+            `## Previous review` (only if one exists), `## Standards`, `## Spec`, and a final one-line
+            summary with the number of findings per axis and the worst issue within each axis.
+            Do not merge or rerank findings across axes. If an axis has no findings, say so in one line.
+            End the comment with this exact line, filled in:
+            `REVIEW_SUMMARY head=${{ github.event.pull_request.head.sha }} blocker=<n> should=<n> nit=<n>`
