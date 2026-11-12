@@ -9,6 +9,11 @@ on:
 
 jobs:
   claude:
+    # Two @claude comments on one PR or issue run one after the other, so they
+    # never edit the same branch at once.
+    concurrency:
+      group: claude-${{ github.repository }}-${{ github.event.issue.number || github.event.pull_request.number }}
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
