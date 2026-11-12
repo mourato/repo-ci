@@ -42,14 +42,21 @@ jobs:
             Review pull request #${{ github.event.pull_request.number }} on two separate axes: Standards and Spec.
             Do not edit files, commit, or push. Your only output is one PR comment.
 
-            ## 1. Diff
-            Run `git diff origin/${{ github.event.pull_request.base.ref }}...HEAD` and
-            `git log origin/${{ github.event.pull_request.base.ref }}..HEAD --oneline`. The reviewed head is `${{ github.event.pull_request.head.sha }}`.
+            ## 1. Round
+            Read earlier comments on this PR (`gh pr view ${{ github.event.pull_request.number }} --comments`) and find the newest
+            line `REVIEW_SUMMARY head=<sha> ...`. Call that SHA PREV.
+            - Round 1: no PREV, or PREV is not an ancestor of the head
+              (`git merge-base --is-ancestor PREV ${{ github.event.pull_request.head.sha }}` fails, for example after a rebase).
+              Review the full diff: `git diff origin/${{ github.event.pull_request.base.ref }}...HEAD` and
+              `git log origin/${{ github.event.pull_request.base.ref }}..HEAD --oneline`.
+            - Closure round: PREV is an ancestor of the head. This is a closure check, not a fresh review.
+              Read the delta only: `git diff PREV..${{ github.event.pull_request.head.sha }}`. Use the full diff only as context.
+            The reviewed head is `${{ github.event.pull_request.head.sha }}`.
 
-            ## 2. Previous review
-            Read earlier review comments on this PR (`gh pr view ${{ github.event.pull_request.number }} --comments`).
-            If one exists, check each of its findings against the current diff and
-            mark it `resolved` or `still open`. Reuse its finding IDs for still-open items.
+            ## 2. Previous findings (closure round only)
+            For each finding in the PREV review, report `resolved` or `still open`, keeping its ID.
+            Report a new finding only when it is inside the delta, or when it is a security or
+            data loss defect anywhere. Do not report anything else outside the delta.
 
             ## 3. Spec source
             The spec is the originating requirement this change implements, never the code itself.
@@ -109,8 +116,8 @@ jobs:
 
             ## 8. Comment
             Post one PR comment in English, under 800 words, with exactly these sections:
-            `## Previous review` (only if one exists), `## Standards`, `## Spec`, and a final one-line
+            `## Previous findings` (closure round only), `## Standards`, `## Spec`, and a final one-line
             summary with the number of findings per axis and the worst issue within each axis.
             Do not merge or rerank findings across axes. If an axis has no findings, say so in one line.
             End the comment with this exact line, filled in:
-            `REVIEW_SUMMARY head=${{ github.event.pull_request.head.sha }} blocker=<n> should=<n> nit=<n>`
+            `REVIEW_SUMMARY head=${{ github.event.pull_request.head.sha }} round=<1|closure> blocker=<n> should=<n> nit=<n>`
