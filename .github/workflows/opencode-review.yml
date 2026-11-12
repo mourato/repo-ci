@@ -47,9 +47,13 @@ jobs:
             `git log origin/${{ github.event.pull_request.base.ref }}..HEAD --oneline`.
 
             ## 2. Spec source
-            The spec is the PR title and body (`gh pr view ${{ github.event.pull_request.number }}`)
-            plus every issue they or the commits reference (`#123`, `Closes #45`), read with `gh issue view`.
-            If none of these states a requirement, report "Sem spec disponível" for the Spec axis.
+            The spec is the originating requirement this change implements, never the code itself.
+            Look for it in this order and use every source you find:
+            1. Issues referenced in the commits, PR title, or PR body (`#123`, `Closes #45`), read with `gh issue view`.
+            2. A spec or plan file under `docs/`, `specs/`, or `.scratch/` that matches the branch name
+               (`${{ github.event.pull_request.head.ref }}`) or the feature.
+            3. The PR title and body (`gh pr view ${{ github.event.pull_request.number }}`), only if it states requirements.
+            If none of these states a requirement, report "No spec available" for the Spec axis.
 
             ## 3. Standards sources
             Read every file in the repo that documents how code should be written:
@@ -79,7 +83,7 @@ jobs:
             Also flag bugs, security problems, and data loss risks under the axis they fit.
 
             ## 5. Comment
-            Post one PR comment in Portuguese, under 800 words, with exactly these sections:
+            Post one PR comment in English, under 800 words, with exactly these sections:
             `## Standards`, `## Spec`, and a final one-line summary with the number of findings
             per axis and the worst issue within each axis. Do not merge or rerank findings across axes.
             If an axis has no findings, say so in one line.
