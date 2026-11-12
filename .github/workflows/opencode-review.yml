@@ -32,15 +32,24 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - uses: anomalyco/opencode/github@latest
+      # Pinned install instead of anomalyco/opencode/github@latest: that action
+      # asks the GitHub API for the latest release first and fails when the
+      # call is rate-limited. Bump OPENCODE_VERSION by hand.
+      - name: Install opencode
+        env:
+          OPENCODE_VERSION: 1.19.5
+        run: |
+          curl -fsSL https://opencode.ai/install | bash -s -- --version "$OPENCODE_VERSION" --no-modify-path
+          echo "$HOME/.opencode/bin" >> "$GITHUB_PATH"
+      - name: Run opencode
+        run: opencode github run
         env:
           OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          model: ${{ inputs.model }}
-          variant: high
-          use_github_token: true
-          prompt: |
+          MODEL: ${{ inputs.model }}
+          VARIANT: high
+          USE_GITHUB_TOKEN: 'true'
+          PROMPT: |
             Review pull request #${{ github.event.pull_request.number }} on two separate axes: Standards and Spec.
             Do not edit files, commit, or push. Your only output is one PR comment.
 
