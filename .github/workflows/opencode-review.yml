@@ -1,0 +1,38 @@
+# Automatic PR review with OpenCode Go. Called from each project repo.
+name: opencode-review
+
+on:
+  workflow_call:
+    inputs:
+      model:
+        type: string
+        default: opencode-go/kimi-k3
+    secrets:
+      OPENCODE_API_KEY:
+        required: true
+
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: anomalyco/opencode/github@latest
+        env:
+          OPENCODE_API_KEY: ${{ secrets.OPENCODE_API_KEY }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          model: ${{ inputs.model }}
+          use_github_token: true
+          prompt: |
+            Review this pull request. Focus on bugs, security problems,
+            data loss, and missing tests. Skip style nits.
+            Follow the repository AGENTS.md or CLAUDE.md if present.
+            Post one concise review comment in Portuguese.
