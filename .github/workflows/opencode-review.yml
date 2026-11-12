@@ -14,8 +14,10 @@ on:
 
 jobs:
   review:
-    # Fork PRs get no secrets, so skip them instead of failing.
-    if: github.event.pull_request.head.repo.full_name == github.repository
+    # Fork and Dependabot PRs get no secrets, so skip them instead of failing.
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.actor != 'dependabot[bot]'
     # A new push cancels the review of the older commit.
     concurrency:
       group: opencode-review-${{ github.repository }}-${{ github.event.pull_request.number }}
