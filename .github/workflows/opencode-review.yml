@@ -55,6 +55,9 @@ jobs:
 
             ## 2. Previous findings (closure round only)
             For each finding in the PREV review, report `resolved` or `still open`, keeping its ID.
+            The author answers each review in a comment that starts with `CI triage`. A finding it
+            marks `deferred`, `dropped`, or `dismissed` is settled: list it once as `settled` with
+            that disposition, and never report it again under Standards or Spec.
             Report a new finding only when it is inside the delta, or when it is a security or
             data loss defect anywhere. Do not report anything else outside the delta.
 
