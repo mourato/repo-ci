@@ -51,7 +51,8 @@ jobs:
           USE_GITHUB_TOKEN: 'true'
           PROMPT: |
             Review pull request #${{ github.event.pull_request.number }} on two separate axes: Standards and Spec.
-            Do not edit files, commit, or push. Your only output is one PR comment.
+            Do not edit files, commit, or push. Do not write to GitHub yourself: no `gh pr comment`, `gh pr review`, or POST via `gh api`.
+            Your final response is the review: opencode posts it as the PR comment, so it must contain the review text only.
 
             ## 1. Round
             Read earlier comments on this PR (`gh pr view ${{ github.event.pull_request.number }} --comments`) and find the newest
@@ -129,7 +130,7 @@ jobs:
             IDs are `S1`, `S2`, ... for Standards and `P1`, `P2`, ... for Spec.
 
             ## 8. Comment
-            Post one PR comment in English, under 800 words, with exactly these sections:
+            Write the review as your final response in English, under 800 words, with exactly these sections:
             `## Previous findings` (closure round only), `## Standards`, `## Spec`, and a final one-line
             summary with the number of findings per axis and the worst issue within each axis.
             Do not merge or rerank findings across axes. If an axis has no findings, say so in one line.
