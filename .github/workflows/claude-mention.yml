@@ -29,3 +29,17 @@ jobs:
       - uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # Pin the model so behavior never changes silently with the action.
+          # The appended rule makes repeat reviews check only the new delta.
+          claude_args: >-
+            --model claude-opus-5-5
+            --append-system-prompt "When a comment asks you to review a pull request,
+            read the PR head SHA and your earlier comments on the PR. Find your newest earlier
+            review that ends with a line CLAUDE_REVIEW head=SHA. If that SHA is an ancestor of
+            the PR head, this is a closure round: review only git diff SHA..HEAD-SHA, report each
+            earlier finding as resolved or still open with its ID, and raise a new finding only
+            inside that delta or for a security or data loss defect anywhere. Otherwise, for
+            example after a rebase or on the first review, review the full PR diff against its
+            base. Give each finding an ID, a severity (blocker, should, or nit), and file:line.
+            End every review comment with the line CLAUDE_REVIEW head=HEAD-SHA round=1 or
+            round=closure. Other requests are not reviews: do what the comment asks."
