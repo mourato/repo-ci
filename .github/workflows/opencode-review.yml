@@ -41,6 +41,17 @@ jobs:
         run: |
           curl -fsSL https://opencode.ai/install | bash -s -- --version "$OPENCODE_VERSION" --no-modify-path
           echo "$HOME/.opencode/bin" >> "$GITHUB_PATH"
+      - name: Record comment boundary
+        id: comment-boundary
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              ...context.repo,
+              issue_number: context.payload.pull_request.number,
+              per_page: 100,
+            });
+            return comments.reduce((last, comment) => Math.max(last, comment.id), 0);
       - name: Run opencode
         run: opencode github run
         env:
@@ -139,3 +150,40 @@ jobs:
             Do not merge or rerank findings across axes. If an axis has no findings, say so in one line.
             End the comment with this exact line, filled in:
             `REVIEW_SUMMARY head=${{ github.event.pull_request.head.sha }} round=<1|closure> blocker=<n> should=<n> nit=<n>`
+      - name: Check review result
+        uses: actions/github-script@v8
+        env:
+          REVIEW_COMMENT_BOUNDARY: ${{ steps.comment-boundary.outputs.result }}
+        with:
+          script: |
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              ...context.repo,
+              issue_number: context.payload.pull_request.number,
+              per_page: 100,
+            });
+            const runLink = `[github run](/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId})`;
+            const reviews = comments.filter(comment =>
+              comment.id > Number(process.env.REVIEW_COMMENT_BOUNDARY) &&
+              comment.user?.login === 'github-actions[bot]' &&
+              comment.user?.type === 'Bot' &&
+              comment.body?.trimEnd().endsWith(runLink)
+            );
+            if (reviews.length !== 1) {
+              core.setFailed('Expected exactly one review comment from this run and attempt.');
+              return;
+            }
+            const lines = reviews[0].body.split(/\r?\n/).filter(line => line.startsWith('REVIEW_SUMMARY'));
+            const summary = lines.length === 1 && lines[0].match(
+              /^REVIEW_SUMMARY head=([a-f0-9]{40}) round=(1|closure) blocker=(\d+) should=(\d+) nit=(\d+)$/
+            );
+            if (!summary || summary[1] !== context.payload.pull_request.head.sha) {
+              core.setFailed('Missing a valid REVIEW_SUMMARY for the reviewed head.');
+              return;
+            }
+            const blocker = Number(summary[3]);
+            const should = Number(summary[4]);
+            if (blocker > 0 || should > 0) {
+              core.setFailed(`Review requires changes: blocker=${blocker}, should=${should}. See the review comment.`);
+              return;
+            }
+            core.notice(`Review passed: blocker=0, should=0, nit=${summary[5]}.`);
