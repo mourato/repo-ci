@@ -4,6 +4,11 @@ Shared AI workflows for my repositories.
 
 - `opencode-review.yml`: automatic review on every non-draft PR, using OpenCode Go.
 - `claude-mention.yml`: Claude Code runs when the owner comments `@claude` on a PR or issue.
+- `secret-scan.yml`: gitleaks scans the commits of every PR, drafts included, and
+  fails the `secret-scan / gitleaks` check when it finds a secret. The log redacts
+  secret values. It replaces GitHub secret scanning, which private repositories
+  on the Free plan lack. Repositories with an older `ai.yml` must add the
+  `secret-scan` job from the template.
 
 ## Add to a project repo
 
