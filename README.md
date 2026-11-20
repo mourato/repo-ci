@@ -4,6 +4,12 @@ Shared AI workflows for my repositories.
 
 - `opencode-review.yml`: automatic review on every non-draft PR, using OpenCode Go.
 - `claude-mention.yml`: Claude Code runs when the owner comments `@claude` on a PR or issue.
+- `secret-scan.yml`: gitleaks scans the commits of every PR, drafts included, and
+  fails the `secret-scan / gitleaks` check when it finds a secret. The log redacts
+  secret values. It stands in for GitHub secret scanning, which private
+  repositories on the Free plan lack, but only for commits that arrive through
+  a PR: direct pushes to the default branch are not scanned. Repositories with an older `ai.yml` must add the
+  `secret-scan` job from the template.
 
 ## Add to a project repo
 
@@ -26,7 +32,7 @@ After a new push, the next review can pass once required findings are resolved
 or settled through the existing `CI triage` procedure. Repositories calling
 the shared workflow at `@main` receive the change when it is merged here;
 their workflow template needs no update. To prevent merging on GitHub, make
-`auto-review / review` a required check in the target branch's protection or
+`auto-review / review` and `secret-scan / gitleaks` required checks in the target branch's protection or
 ruleset, where the repository's plan supports it. A failing optional check
 alone does not prevent a merge.
 
