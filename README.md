@@ -8,7 +8,9 @@ Shared AI workflows for my repositories.
   fails the `secret-scan / gitleaks` check when it finds a secret. The log redacts
   secret values. It stands in for GitHub secret scanning, which private
   repositories on the Free plan lack, but only for commits that arrive through
-  a PR: direct pushes to the default branch are not scanned. Repositories with an older `ai.yml` must add the
+  a PR: direct pushes to the default branch are not scanned. A PR labeled
+  `local-review` (low Actions quota) skips this scan; the agent merge script
+  runs gitleaks locally on the PR commits instead. Repositories with an older `ai.yml` must add the
   `secret-scan` job from the template.
 
 ## Add to a project repo
