@@ -25,6 +25,10 @@ The `auto-review / review` check reflects the review findings. It fails when
 it. The full review remains a PR comment. This workflow does not submit a
 formal approval or request-changes review.
 
+The Standards axis also checks the criteria of each skill listed in the PR
+body's `Skills de qualidade:` line, read from the base branch. A listed skill
+that is not in the repository yields one `nit`, so it never fails the check.
+
 The check accepts only the comment posted by `github-actions[bot]` for the
 current run and attempt, with a valid `REVIEW_SUMMARY` for the reviewed head.
 A missing, malformed, or ambiguous result fails the check. OpenCode or GitHub
