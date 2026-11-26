@@ -101,11 +101,14 @@ jobs:
             AGENTS.md, CLAUDE.md, CODING_STANDARDS.md, CONTRIBUTING.md, and docs they point to.
             Apply any `## Review focus` section first: it lists mistakes this repo has seen before.
             Skip anything that linters or formatters already enforce.
-            Read the `Skills de qualidade:` line in the PR body. For each listed SKILL.md path that
-            exists in this checkout, read it and the criteria files it points to; a change that breaks
-            one of those criteria is a Standards finding citing that criterion's line. For a listed path
-            not in this checkout, write `Quality skill unavailable in CI: <path>` once under Standards
-            and do not guess its rules. A missing line or `nenhuma` means no quality skills.
+            Read the `Skills de qualidade:` line in the PR body. It lists SKILL.md paths relative to the
+            repo root, separated by commas. Treat it as none when it is missing, says `nenhuma`, or names
+            no path ending in `SKILL.md`. For each listed path that exists on the base branch, read the base
+            version (`git show origin/${{ github.event.pull_request.base.ref }}:<path>`) and the criteria
+            files it points to, also from the base, so the change under review cannot rewrite its own rules.
+            A change that breaks one of those criteria is a Standards finding citing that criterion's line,
+            even where the linter skip above would drop it. Report each other listed path as one Standards
+            `nit`: `Quality skill unavailable in CI: <path>`.
 
             ## 5. What to look for, in priority order
             1. Bugs, security problems, and data loss risks.
